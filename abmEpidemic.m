@@ -17,8 +17,8 @@
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 cont=false; %continue previous simulation
-rng('shuffle')
-% rng(0)
+% rng('shuffle')
+rng(0)
 
 %% model parameters
 
@@ -30,7 +30,7 @@ infectDistance2=0.05^2; %radius^2 under which infection occurs
 timeToRecover=25; %number of iterations to recover
 restrictMotion=false; %if true then sick are stationary
 quarantine=false; %if true no motion across 0.4<xy<0.6
-quarantineEffectiveness=1; %probability of no motion across quarantine
+quarantineEffectiveness=0.9; %probability of no motion across quarantine
 
 %agents
 params.healthy=1;
@@ -133,8 +133,9 @@ while sum(not([person.healthy]))
 end
 toc
 
-%% FUNCTIONS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
 function agents=initAgents(num,params)
   for i=1:num
     agents(i).xy=rand(1,2);
@@ -146,12 +147,14 @@ function agents=initAgents(num,params)
   end
 end
 
+%%
 function agents=categorize(agents)
   for i=1:numel(agents)
     agents(i).type=agents(i).healthy+agents(i).immune;
   end
 end
 
+%%
 function agents=randomMotion(agents)
   for i=1:numel(agents)
     radius=randn(1)*agents(i).motionNoise;
@@ -163,6 +166,7 @@ function agents=randomMotion(agents)
   end
 end
 
+%%
 function agents=reproAgents(agents,params)
   numAgents=numel(agents);
   for i=1:numAgents
@@ -172,6 +176,7 @@ function agents=reproAgents(agents,params)
   end
 end
 
+%%
 function drawAgents(agents)
   cla
 %   axis equal
@@ -193,6 +198,7 @@ function drawAgents(agents)
   xlabel('x'), ylabel('y'),
 end
 
+%%
 function drawData(data)
   cla
   markers={'g','r','b'};
