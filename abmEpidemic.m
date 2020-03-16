@@ -1,5 +1,5 @@
 % This file provides a simple agent-based modelling simulation
-% of the spread of an epidemic in an 1x1 ecosystem
+% of the spread of an epidemic in a 1x1 ecosystem
 % 
 % Copyright (C) 2020 Ciarán O'Reilly <ciaran@kth.se>
 % 
