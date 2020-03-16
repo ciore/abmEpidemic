@@ -24,7 +24,8 @@ rng(0)
 
 %model
 typeNames={'healthy','sick','immune'};
-numStart=5; %number of sick at start
+numPerson0=100; %number if people in the population at the start
+numSick0=5; %number of sick at start
 local=true; %if true then sick are localised within 0.4<xy<0.6
 infectDistance2=0.05^2; %radius^2 under which infection occurs
 timeToRecover=25; %number of iterations to recover
@@ -42,15 +43,14 @@ params.motionNoise=0.05;
 
 if ~cont
  
-  numPeople0=100;
-  person=initAgents(numPeople0,params);
+  person=initAgents(numPerson0,params);
   if local
     epicentre=find(sum(reshape([person.xy]>0.4&[person.xy]<0.6,2,numel(person)),1)==2);
-    for i=randi(numel(epicentre),1,numStart)
+    for i=randi(numel(epicentre),1,numSick0)
       person(epicentre(i)).healthy=0;
     end
   else
-    for i=randi(numel(numPeople0),1,numStart)
+    for i=randi(numel(numPerson0),1,numSick0)
       person(epicentre(i)).healthy=0;
     end    
   end
