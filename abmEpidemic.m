@@ -16,7 +16,6 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-cont=false; %continue previous simulation
 % rng('shuffle')
 rng(0)
 
@@ -26,10 +25,10 @@ rng(0)
 typeNames={'healthy','sick','immune'};
 numPerson0=100; %number if people in the population at the start
 numSick0=5; %number of sick at start
-local=true; %if true then sick are localised within 0.4<xy<0.6
 infectDistance2=0.05^2; %radius^2 under which infection occurs
 timeToRecover=25; %number of iterations to recover
-restrictMotion=false; %if true then sick are stationary
+localised=true; %if true then sick are localised within 0.4<xy<0.6
+restrictMotion=true; %if true then sick are stationary
 quarantine=false; %if true no motion across 0.4<xy<0.6
 quarantineEffectiveness=0.9; %probability of no motion across quarantine
 
@@ -39,29 +38,19 @@ params.immune=0;
 params.timeSick=0;
 params.motionNoise=0.05;
 
-%% initialise
-
-if ~cont
- 
-  person=initAgents(numPerson0,params);
-  if local
-    epicentre=find(sum(reshape([person.xy]>0.4&[person.xy]<0.6,2,numel(person)),1)==2);
-    for i=randi(numel(epicentre),1,numSick0)
-      person(epicentre(i)).healthy=0;
-    end
-  else
-    for i=randi(numel(numPerson0),1,numSick0)
-      person(epicentre(i)).healthy=0;
-    end    
-  end
-  person=categorize(person);
-  
-  time=0;
-  
-  data=[sum([person.healthy]) sum(not([person.healthy])) sum([person.immune])];
-
+%% initialise 
+person=initAgents(numPerson0,params);
+if localised
+  epicentre=find(sum(reshape([person.xy]>0.4&[person.xy]<0.6,2,numel(person)),1)==2);
+else
+  epicentre=1:numPerson0;
 end
-
+for i=randi(numel(epicentre),1,numSick0)
+  person(epicentre(i)).healthy=0;
+end
+person=categorize(person);
+time=0;
+data=[sum([person.healthy]) sum(not([person.healthy])) sum([person.immune])];
 subplot(2,1,1), drawAgents(person)
 
 %% step
