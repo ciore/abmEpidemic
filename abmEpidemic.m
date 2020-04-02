@@ -25,12 +25,14 @@ rng(0)
 typeNames={'healthy','sick','immune'};
 numPerson0=100; %number if people in the population at the start
 numSick0=5; %number of sick at start
-infectDistance2=0.05^2; %radius^2 under which infection occurs
+infectDistance2=0.025^2; %radius^2 under which infection occurs
 timeToRecover=25; %number of iterations to recover
-localised=true; %if true then sick are localised within 0.4<xy<0.6
-restrictMotion=true; %if true then sick are stationary
+localised=false; %if true then sick are localised within 0.4<xy<0.6
+localisedZone=[0.3, 0.6, 0.3, 0.6]; %square zone [x0 x1 y0 y1]
+restrictMotion=false; %if true then sick are stationary
 quarantine=false; %if true no motion across 0.4<xy<0.6
-quarantineEffectiveness=0.9; %probability of no motion across quarantine
+quarantineZone=[0.35, 0.65, 0.35, 0.65]; %square zone [x0 x1 y0 y1]
+quarantineEffectiveness=0.95; %probability of no motion across quarantine
 
 %agents
 params.healthy=1;
@@ -41,7 +43,7 @@ params.motionNoise=0.05;
 %% initialise 
 person=initAgents(numPerson0,params);
 if localised
-  epicentre=find(sum(reshape([person.xy]>0.4&[person.xy]<0.6,2,numel(person)),1)==2);
+  epicentre=find(checkInZone([person.xy],localisedZone));
 else
   epicentre=1:numPerson0;
 end
@@ -51,7 +53,7 @@ end
 person=categorize(person);
 time=0;
 data=[sum([person.healthy]) sum(not([person.healthy])) sum([person.immune])];
-subplot(2,1,1), drawAgents(person)
+subplot(1,2,1), drawAgents(person)
 
 %% step
 tic
@@ -61,18 +63,17 @@ while sum(not([person.healthy]))
   
   %simulate random motion with quarantine zone for sick
   if quarantine
-    personNew=randomMotion(person);
+    xy=reshape([person.xy],2,numel(person))';
+    person=randomMotion(person);
     for i=1:numel(person)
-      if (person(i).xy>0.4)&(person(i).xy<0.6)
-        if rand>quarantineEffectiveness
-          person(i).xy=personNew(i).xy;
+      if checkInZone(person(i).xy,quarantineZone)&not(checkInZone(xy(i,:),quarantineZone))
+        if rand<quarantineEffectiveness
+          person(i).xy=xy(i,:);
         end
-      elseif (personNew(i).xy>0.4)&(personNew(i).xy<0.6)
-        if rand>quarantineEffectiveness
-          person(i).xy=personNew(i).xy;
+      elseif not(checkInZone(person(i).xy,quarantineZone))&checkInZone(xy(i,:),quarantineZone)
+        if rand<quarantineEffectiveness
+          person(i).xy=xy(i,:);
         end
-      else
-        person(i).xy=personNew(i).xy;
       end
     end
   else
@@ -112,12 +113,12 @@ while sum(not([person.healthy]))
   end
   
   %plot
-  subplot(2,1,1), drawAgents(person)
+  subplot(1,2,1), drawAgents(person)
   drawnow
 
   %store data
   data=[data; sum([person.healthy]) sum(not([person.healthy])) sum([person.immune]==1)];
-  subplot(2,1,2), drawData(data), legend(typeNames,'Location','northwest')
+  subplot(1,2,2), drawData(data), legend(typeNames,'Location','northwest')
   
 end
 toc
@@ -165,10 +166,16 @@ function agents=reproAgents(agents,params)
   end
 end
 
+%% 
+function value=checkInZone(xy,zone)
+  xy=reshape(xy,2,numel(xy)/2)';
+  value=xy(:,1)>zone(1)&xy(:,1)<zone(2)&xy(:,2)>zone(3)&xy(:,2)<zone(4);
+end
+
 %%
 function drawAgents(agents)
   cla
-%   axis equal
+  axis equal
   axis([0 1 0 1])
   hold on
   markers={'.r','.g','.b'};

@@ -1,24 +1,45 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# This file provides a simple agent-based modelling simulation
+# of the spread of an epidemic in a 1x1 ecosystem
+
+# Copyright (C) 2020 Ciarán O'Reilly <ciaran@kth.se>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 import numpy as np
 import random as rd
 import matplotlib.pyplot as pl
 import time
 
-rd.seed(1)
+rd.seed(0)
 
 # model and agent parameters
 motionNoise = 0.05
 typeNames=('healthy', 'sick', 'immune');
 numPeople0=100 #number if people in the population at the start
 numSick0=5 #number of sick at start
-infectDistance2=0.05**2 #radius^2 under which infection occurs
+infectDistance2=0.025**2 #radius^2 under which infection occurs
 timeToRecover=25 #number of iterations to recover
-localised=True #if true then sick are localised within 0.4<xy<0.6
-restrictMotion=True #if true then sick are stationary
-quarantine=False #if true no motion across 0.4<xy<0.6
-quarantineEffectiveness=0.9 #probability of no motion across quarantine
+localised=False #if true then sick are localised within 0.4<xy<0.6
+localisedZone=[0.4, 0.6, 0.4, 0.6] #square zone [x0 x1 y0 y1]
+restrictMotion=False #if true then sick are stationary
+quarantine=False #if true no motion across zone
+quarantineZone=[0.35, 0.65, 0.35, 0.65] #square zone [x0 x1 y0 y1]
+quarantineEffectiveness=0.95 #probability of no motion across quarantine
 
 class person:
   def __init__(self,xy):
@@ -39,9 +60,11 @@ def draw(people,data):
     elif people[i].type==2:
       ax[0].scatter(people[i].xy[0], people[i].xy[1], color = 'blue')
   ax[0].axis([0, 1, 0, 1])
-  # ax[0].axis('scaled')
+  ax[0].axis('scaled')
   ax[0].set_xlabel('x')
   ax[0].set_ylabel('y')
+  ax[0].set_xlim(-0.1, 1.1)
+  ax[0].set_ylim(-0.1, 1.1)
   ax[1].plot(list(range(t+1)),[data[i][0] for i in range(len(data))],'g')
   ax[1].plot(list(range(t+1)),[data[i][1] for i in range(len(data))],'r')
   ax[1].plot(list(range(t+1)),[data[i][2] for i in range(len(data))],'b')
@@ -49,6 +72,7 @@ def draw(people,data):
   ax[1].set_ylabel('number of people')
   ax[1].set_ylim(-5, 100)
   pl.subplots_adjust(hspace=0.5)
+  pl.subplots_adjust(wspace=0.5)
     
 def randomMotion(people):
   for i in range(len(people)):
@@ -65,14 +89,18 @@ def randomMotion(people):
       xy[1] = 1
     people[i].xy = xy
     
+def checkInZone(xy,zone):
+  value = xy[0]>zone[0] and xy[0]<zone[1] and xy[1]>zone[2] and xy[1]<zone[3]
+  return value
+  
+#############################    
   
 # initialise population
-global people 
 people = []
 for i in range(numPeople0):
     people.append(person([rd.uniform(0,1), rd.uniform(0,1)]))    
 if localised:
-  epicentre = list(np.where(np.array([[p.xy[0]>0.4 and p.xy[1]>0.4 and p.xy[0]<0.6 and p.xy[1]<0.6] for p in people]))[0])
+  epicentre = list(np.where(np.array([checkInZone(p.xy,localisedZone) for p in people]))[0])
 else:
   epicentre = rd.sample(range(numPeople0),numSick0)
 for i in epicentre:
@@ -85,7 +113,7 @@ numSick = numSick0
 numImmune = 0
 data=[[numHealthy, numSick0, numImmune]]
 pl.ion()
-fig, ax = pl.subplots(2,1)
+fig, ax = pl.subplots(1,2)
 draw(people,data)
 
 # simulate
@@ -93,8 +121,20 @@ timer0 = time.time()
 while sum([not p.healthy for p in people]) > 0:
   t += 1
   
-  randomMotion(people)
-  
+  # simulate random motion with quarantine zone for sick
+  if quarantine:
+    xy = [people[i].xy for i in range(len(people))]
+    randomMotion(people)
+    for i in range(len(people)):
+      if (not checkInZone(people[i].xy,quarantineZone)) and checkInZone(xy[i],quarantineZone):
+        if rd.uniform(0,1) < quarantineEffectiveness:
+          people[i].xy = xy[i]
+      elif checkInZone(people[i].xy,quarantineZone) and (not checkInZone(xy[i],quarantineZone)):
+        if rd.uniform(0,1) < quarantineEffectiveness:
+          people[i].xy = xy[i]
+  else:
+    randomMotion(people)
+    
   for i in range(len(people)):
 
     #detect interaction and change state
@@ -125,7 +165,7 @@ while sum([not p.healthy for p in people]) > 0:
 
   # plot 
   pl.ion()
-  fig, ax = pl.subplots(2,1)
+  fig, ax = pl.subplots(1,2)
   draw(people,data)
   pl.show()
   pl.pause(0.001)
